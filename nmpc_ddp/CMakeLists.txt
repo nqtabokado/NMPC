@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.17)
+cmake_policy(SET CMP0057 NEW)
 
 set(PROJECT_NAME nmpc_ddp)
 set(PROJECT_GENERATED_HEADERS_SKIP_DEPRECATED ON)
@@ -11,11 +12,15 @@ set(PROJECT_USE_CMAKE_EXPORT TRUE)
 set(CXX_DISABLE_WERROR ON)
 option(INSTALL_DOCUMENTATION "Generate and install the documentation" OFF)
 
-include(../cmake/base.cmake)
+include(../nmpc/cmake/base.cmake)
 project(nmpc_ddp LANGUAGES CXX)
 
 # Options
 option(OPTIMIZE_FOR_NATIVE "Enable -march=native" OFF)
+
+find_package(rclcpp REQUIRED)
+find_package(visualization_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 
 if(NOT DEFINED NMPC_STANDALONE)
   set(NMPC_STANDALONE OFF)
@@ -23,11 +28,8 @@ if(NOT DEFINED NMPC_STANDALONE)
 else()
   set(DOXYGEN_HTML_OUTPUT doxygen-html)
 endif()
-
 if(NOT NMPC_STANDALONE)
-  find_package(catkin REQUIRED COMPONENTS
-    roscpp
-    )
+  find_package(ament_cmake REQUIRED)
 endif()
 
 # Eigen
@@ -39,25 +41,20 @@ else()
 endif()
 
 if(NOT NMPC_STANDALONE)
-  catkin_package(
-    CATKIN_DEPENDS
-    roscpp
-    DEPENDS EIGEN3
-    INCLUDE_DIRS include
-    LIBRARIES
-    )
+  ament_export_dependencies(
+#    rclcpp
+    EIGEN3
+  )
 else()
-  set(CATKIN_ENABLE_TESTING OFF)
+  set(BUILD_TESTING OFF)
 endif()
 
 add_library(nmpc_ddp INTERFACE)
 target_compile_features(nmpc_ddp INTERFACE cxx_std_17)
 if(NOT NMPC_STANDALONE)
   target_include_directories(nmpc_ddp INTERFACE
-    ${catkin_INCLUDE_DIRS}
-    )
-  target_link_libraries(nmpc_ddp INTERFACE
-    ${catkin_LIBRARIES}
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+    "$<INSTALL_INTERFACE:include>"
     )
 endif()
 target_include_directories(nmpc_ddp INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
@@ -70,13 +67,21 @@ else()
   target_include_directories(nmpc_ddp SYSTEM INTERFACE "${EIGEN3_INCLUDE_DIR}")
 endif()
 
+ament_target_dependencies(nmpc_ddp INTERFACE
+  rclcpp
+  std_srvs
+  visualization_msgs
+)
+
 install(TARGETS nmpc_ddp EXPORT "${TARGETS_EXPORT_NAME}")
 install(DIRECTORY include/nmpc_ddp DESTINATION "${INCLUDE_INSTALL_DIR}")
 
-if(BUILD_TESTING OR CATKIN_ENABLE_TESTING)
+if(BUILD_TESTING)
   add_subdirectory(tests)
 endif()
 
 if(INSTALL_DOCUMENTATION)
   add_subdirectory(doc)
 endif()
+
+ament_package()

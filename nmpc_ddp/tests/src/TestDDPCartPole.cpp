@@ -8,9 +8,9 @@
 #include <iostream>
 #include <limits>
 
-#include <ros/ros.h>
-#include <visualization_msgs/MarkerArray.h>
-#include <std_srvs/Empty.h>
+#include <rclcpp/rclcpp.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
+#include <std_srvs/srv/empty.hpp>
 
 #include <nmpc_ddp/DDPSolver.h>
 
@@ -239,28 +239,28 @@ public:
   TestDDPCartPole()
   {
     // Setup ROS
-    marker_arr_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("marker_arr", 1);
+    marker_arr_pub_ = nh_.advertise<visualization_msgs::msg::MarkerArray>("marker_arr", 1);
     constexpr double dist_force_small = 10; // [N]
-    dist_left_small_srv_ = nh_.advertiseService<std_srvs::Empty::Request, std_srvs::Empty::Response>(
+    dist_left_small_srv_ = nh_.advertiseService<std_srvs::srv::Empty::Request, std_srvs::srv::Empty::Response>(
         "/dist_left_small", std::bind(&TestDDPCartPole::distCallback, this, std::placeholders::_1,
                                       std::placeholders::_2, -1 * dist_force_small));
-    dist_right_small_srv_ = nh_.advertiseService<std_srvs::Empty::Request, std_srvs::Empty::Response>(
+    dist_right_small_srv_ = nh_.advertiseService<std_srvs::srv::Empty::Request, std_srvs::srv::Empty::Response>(
         "/dist_right_small", std::bind(&TestDDPCartPole::distCallback, this, std::placeholders::_1,
                                        std::placeholders::_2, dist_force_small));
     constexpr double dist_force_large = 30; // [N]
-    dist_left_large_srv_ = nh_.advertiseService<std_srvs::Empty::Request, std_srvs::Empty::Response>(
+    dist_left_large_srv_ = nh_.advertiseService<std_srvs::srv::Empty::Request, std_srvs::srv::Empty::Response>(
         "/dist_left_large", std::bind(&TestDDPCartPole::distCallback, this, std::placeholders::_1,
                                       std::placeholders::_2, -1 * dist_force_large));
-    dist_right_large_srv_ = nh_.advertiseService<std_srvs::Empty::Request, std_srvs::Empty::Response>(
+    dist_right_large_srv_ = nh_.advertiseService<std_srvs::srv::Empty::Request, std_srvs::srv::Empty::Response>(
         "/dist_right_large", std::bind(&TestDDPCartPole::distCallback, this, std::placeholders::_1,
                                        std::placeholders::_2, dist_force_large));
-    target_pos_m5_srv_ = nh_.advertiseService<std_srvs::Empty::Request, std_srvs::Empty::Response>(
+    target_pos_m5_srv_ = nh_.advertiseService<std_srvs::srv::Empty::Request, std_srvs::srv::Empty::Response>(
         "/target_pos_m5",
         std::bind(&TestDDPCartPole::targetPosCallback, this, std::placeholders::_1, std::placeholders::_2, -5.0));
-    target_pos_0_srv_ = nh_.advertiseService<std_srvs::Empty::Request, std_srvs::Empty::Response>(
+    target_pos_0_srv_ = nh_.advertiseService<std_srvs::srv::Empty::Request, std_srvs::srv::Empty::Response>(
         "/target_pos_0",
         std::bind(&TestDDPCartPole::targetPosCallback, this, std::placeholders::_1, std::placeholders::_2, 0.0));
-    target_pos_p5_srv_ = nh_.advertiseService<std_srvs::Empty::Request, std_srvs::Empty::Response>(
+    target_pos_p5_srv_ = nh_.advertiseService<std_srvs::srv::Empty::Request, std_srvs::srv::Empty::Response>(
         "/target_pos_p5",
         std::bind(&TestDDPCartPole::targetPosCallback, this, std::placeholders::_1, std::placeholders::_2, 5.0));
 
@@ -314,13 +314,13 @@ public:
     std::string file_path = "/tmp/TestDDPCartPoleResult.txt";
     std::ofstream ofs(file_path);
     ofs << "time pos theta vel omega force ref_pos disturbance" << std::endl;
-    ros::Rate rate(1.0 / sim_dt);
+    rclcpp::Rate rate(1.0 / sim_dt);
     bool no_exit = false;
     pnh_.getParam("no_exit", no_exit);
     constexpr double end_t = 10.0; // [sec]
-    ros::Timer mpc_timer = nh_.createTimer(ros::Duration(mpc_dt),
+    rclcpp::Timer mpc_timer = nh_.createTimer(rclcpp::Duration(mpc_dt),
                                            std::bind(&TestDDPCartPole::mpcTimerCallback, this, std::placeholders::_1));
-    while(ros::ok() && (no_exit || current_t_ < end_t))
+    while(rclcpp::ok() && (no_exit || current_t_ < end_t))
     {
       // Simulate one step
       if(dist_t_ < current_t_)
@@ -402,8 +402,8 @@ protected:
     }
   }
 
-  bool distCallback(std_srvs::Empty::Request &, // req
-                    std_srvs::Empty::Response &, // res
+  bool distCallback(std_srvs::srv::Empty::Request &, // req
+                    std_srvs::srv::Empty::Response &, // res
                     double dist_force)
   {
     dist_u_ << dist_force;
@@ -411,36 +411,36 @@ protected:
     return true;
   }
 
-  bool targetPosCallback(std_srvs::Empty::Request &, // req
-                         std_srvs::Empty::Response &, // res
+  bool targetPosCallback(std_srvs::srv::Empty::Request &, // req
+                         std_srvs::srv::Empty::Response &, // res
                          double pos)
   {
     target_pos_ = pos;
     return true;
   }
 
-  visualization_msgs::MarkerArray makeMarkerArr() const
+  visualization_msgs::msg::MarkerArray makeMarkerArr() const
   {
     std_msgs::Header header_msg;
     header_msg.frame_id = "world";
-    header_msg.stamp = ros::Time::now();
+    header_msg.stamp = rclcpp::Time::now();
 
     // Instantiate marker array
-    visualization_msgs::MarkerArray marker_arr_msg;
+    visualization_msgs::msg::MarkerArray marker_arr_msg;
 
     // Delete marker
-    visualization_msgs::Marker del_marker;
-    del_marker.action = visualization_msgs::Marker::DELETEALL;
+    visualization_msgs::msg::Marker del_marker;
+    del_marker.action = visualization_msgs::msg::Marker::DELETEALL;
     del_marker.header = header_msg;
     del_marker.id = static_cast<int>(marker_arr_msg.markers.size());
     marker_arr_msg.markers.push_back(del_marker);
 
     // Cart marker
-    visualization_msgs::Marker cart_marker;
+    visualization_msgs::msg::Marker cart_marker;
     cart_marker.header = header_msg;
     cart_marker.ns = "cart";
     cart_marker.id = static_cast<int>(marker_arr_msg.markers.size());
-    cart_marker.type = visualization_msgs::Marker::CUBE;
+    cart_marker.type = visualization_msgs::msg::Marker::CUBE;
     cart_marker.color.r = 0;
     cart_marker.color.g = 1;
     cart_marker.color.b = 0;
@@ -455,11 +455,11 @@ protected:
     marker_arr_msg.markers.push_back(cart_marker);
 
     // Mass marker
-    visualization_msgs::Marker mass_marker;
+    visualization_msgs::msg::Marker mass_marker;
     mass_marker.header = header_msg;
     mass_marker.ns = "mass";
     cart_marker.id = static_cast<int>(marker_arr_msg.markers.size());
-    mass_marker.type = visualization_msgs::Marker::CYLINDER;
+    mass_marker.type = visualization_msgs::msg::Marker::CYLINDER;
     mass_marker.color.r = 0;
     mass_marker.color.g = 0;
     mass_marker.color.b = 1;
@@ -474,11 +474,11 @@ protected:
     marker_arr_msg.markers.push_back(mass_marker);
 
     // Pole marker
-    visualization_msgs::Marker pole_marker;
+    visualization_msgs::msg::Marker pole_marker;
     pole_marker.header = header_msg;
     pole_marker.ns = "pole";
     pole_marker.id = static_cast<int>(marker_arr_msg.markers.size());
-    pole_marker.type = visualization_msgs::Marker::LINE_LIST;
+    pole_marker.type = visualization_msgs::msg::Marker::LINE_LIST;
     pole_marker.color.r = 0;
     pole_marker.color.g = 0;
     pole_marker.color.b = 0;
@@ -498,11 +498,11 @@ protected:
     constexpr double force_thre = 1.0; // [N]
     if(std::abs(current_u_[0]) > force_thre)
     {
-      visualization_msgs::Marker force_marker;
+      visualization_msgs::msg::Marker force_marker;
       force_marker.header = header_msg;
       force_marker.ns = "force";
       force_marker.id = static_cast<int>(marker_arr_msg.markers.size());
-      force_marker.type = visualization_msgs::Marker::ARROW;
+      force_marker.type = visualization_msgs::msg::Marker::ARROW;
       force_marker.color.r = 1;
       force_marker.color.g = 0;
       force_marker.color.b = 0;
@@ -523,11 +523,11 @@ protected:
     // Disturbance marker
     if(std::abs(dist_u_[0]) > force_thre)
     {
-      visualization_msgs::Marker dist_marker;
+      visualization_msgs::msg::Marker dist_marker;
       dist_marker.header = header_msg;
       dist_marker.ns = "disturbance";
       dist_marker.id = static_cast<int>(marker_arr_msg.markers.size());
-      dist_marker.type = visualization_msgs::Marker::ARROW;
+      dist_marker.type = visualization_msgs::msg::Marker::ARROW;
       dist_marker.color.r = 1;
       dist_marker.color.g = 1;
       dist_marker.color.b = 0;
@@ -547,11 +547,11 @@ protected:
 
     // Target marker
     double target_pos = getRefPos(current_t_);
-    visualization_msgs::Marker target_marker;
+    visualization_msgs::msg::Marker target_marker;
     target_marker.header = header_msg;
     target_marker.ns = "target";
     target_marker.id = static_cast<int>(marker_arr_msg.markers.size());
-    target_marker.type = visualization_msgs::Marker::LINE_LIST;
+    target_marker.type = visualization_msgs::msg::Marker::LINE_LIST;
     target_marker.color.r = 0;
     target_marker.color.g = 1;
     target_marker.color.b = 1;
@@ -601,7 +601,7 @@ TEST(TestDDPCartPole, SolveMpc)
   TestDDPCartPole test;
 
   // Sleep to wait for Rviz to launch
-  ros::Duration(1.0).sleep();
+  rclcpp::Duration(1.0).sleep();
 
   test.run();
 }
@@ -649,7 +649,7 @@ TEST(TestDDPCartPole, CheckDerivative)
 
 int main(int argc, char ** argv)
 {
-  ros::init(argc, argv, "test_ddp_cart_pole");
-  testing::InitGoogleTest(&argc, argv);
+  rclcpp::init(argc, argv);
+  ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
