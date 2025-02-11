@@ -7,6 +7,7 @@
 #include <functional>
 #include <iostream>
 #include <limits>
+#include <chrono>
 
 #include <rclcpp/rclcpp.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
@@ -239,51 +240,51 @@ public:
   TestDDPCartPole()
   {
     // Setup ROS
-    marker_arr_pub_ = nh_.advertise<visualization_msgs::msg::MarkerArray>("marker_arr", 1);
+    marker_arr_pub_ = nh_->create_publisher<visualization_msgs::msg::MarkerArray>("marker_arr", 1);
     constexpr double dist_force_small = 10; // [N]
-    dist_left_small_srv_ = nh_.advertiseService<std_srvs::srv::Empty::Request, std_srvs::srv::Empty::Response>(
+    dist_left_small_srv_ = nh_->create_service<std_srvs::srv::Empty>(
         "/dist_left_small", std::bind(&TestDDPCartPole::distCallback, this, std::placeholders::_1,
                                       std::placeholders::_2, -1 * dist_force_small));
-    dist_right_small_srv_ = nh_.advertiseService<std_srvs::srv::Empty::Request, std_srvs::srv::Empty::Response>(
+    dist_right_small_srv_ = nh_->create_service<std_srvs::srv::Empty>(
         "/dist_right_small", std::bind(&TestDDPCartPole::distCallback, this, std::placeholders::_1,
                                        std::placeholders::_2, dist_force_small));
     constexpr double dist_force_large = 30; // [N]
-    dist_left_large_srv_ = nh_.advertiseService<std_srvs::srv::Empty::Request, std_srvs::srv::Empty::Response>(
+    dist_left_large_srv_ = nh_->create_service<std_srvs::srv::Empty>(
         "/dist_left_large", std::bind(&TestDDPCartPole::distCallback, this, std::placeholders::_1,
                                       std::placeholders::_2, -1 * dist_force_large));
-    dist_right_large_srv_ = nh_.advertiseService<std_srvs::srv::Empty::Request, std_srvs::srv::Empty::Response>(
+    dist_right_large_srv_ = nh_->create_service<std_srvs::srv::Empty>(
         "/dist_right_large", std::bind(&TestDDPCartPole::distCallback, this, std::placeholders::_1,
                                        std::placeholders::_2, dist_force_large));
-    target_pos_m5_srv_ = nh_.advertiseService<std_srvs::srv::Empty::Request, std_srvs::srv::Empty::Response>(
+    target_pos_m5_srv_ = nh_->create_service<std_srvs::srv::Empty>(
         "/target_pos_m5",
         std::bind(&TestDDPCartPole::targetPosCallback, this, std::placeholders::_1, std::placeholders::_2, -5.0));
-    target_pos_0_srv_ = nh_.advertiseService<std_srvs::srv::Empty::Request, std_srvs::srv::Empty::Response>(
+    target_pos_0_srv_ = nh_->create_service<std_srvs::srv::Empty>(
         "/target_pos_0",
         std::bind(&TestDDPCartPole::targetPosCallback, this, std::placeholders::_1, std::placeholders::_2, 0.0));
-    target_pos_p5_srv_ = nh_.advertiseService<std_srvs::srv::Empty::Request, std_srvs::srv::Empty::Response>(
+    target_pos_p5_srv_ = nh_->create_service<std_srvs::srv::Empty>(
         "/target_pos_p5",
         std::bind(&TestDDPCartPole::targetPosCallback, this, std::placeholders::_1, std::placeholders::_2, 5.0));
 
     // Instantiate problem
     double horizon_dt = 0.01; // [sec]
     double horizon_duration = 2.0; // [sec]
-    pnh_.getParam("control/horizon_dt", horizon_dt);
-    pnh_.getParam("control/horizon_duration", horizon_duration);
+    nh_->get_parameter("control/horizon_dt", horizon_dt);
+    nh_->get_parameter("control/horizon_duration", horizon_duration);
     ddp_problem_ = std::make_shared<DDPProblemCartPole>(
         horizon_dt, std::bind(&TestDDPCartPole::getRefPos, this, std::placeholders::_1));
-    pnh_.getParam("param/cart_mass", ddp_problem_->param_.cart_mass);
-    pnh_.getParam("param/pole_mass", ddp_problem_->param_.pole_mass);
-    pnh_.getParam("param/pole_length", ddp_problem_->param_.pole_length);
+    nh_->get_parameter("param/cart_mass", ddp_problem_->param_.cart_mass);
+    nh_->get_parameter("param/pole_mass", ddp_problem_->param_.pole_mass);
+    nh_->get_parameter("param/pole_length", ddp_problem_->param_.pole_length);
     std::vector<double> param_vec;
-    if(pnh_.getParam("cost/running_x", param_vec))
+    if(nh_->get_parameter("cost/running_x", param_vec))
     {
       ddp_problem_->cost_weight_.running_x = Eigen::Map<DDPProblemCartPole::StateDimVector>(param_vec.data());
     }
-    if(pnh_.getParam("cost/running_u", param_vec))
+    if(nh_->get_parameter("cost/running_u", param_vec))
     {
       ddp_problem_->cost_weight_.running_u = Eigen::Map<DDPProblemCartPole::InputDimVector>(param_vec.data());
     }
-    if(pnh_.getParam("cost/terminal_x", param_vec))
+    if(nh_->get_parameter("cost/terminal_x", param_vec))
     {
       ddp_problem_->cost_weight_.terminal_x = Eigen::Map<DDPProblemCartPole::StateDimVector>(param_vec.data());
     }
@@ -301,8 +302,8 @@ public:
     // Setup simulation loop
     double mpc_dt = 0.004; // [sec]
     double sim_dt = 0.002; // [sec]
-    pnh_.getParam("control/mpc_dt", mpc_dt);
-    pnh_.getParam("control/sim_dt", sim_dt);
+    nh_->get_parameter("control/mpc_dt", mpc_dt);
+    nh_->get_parameter("control/sim_dt", sim_dt);
     current_t_ = 0;
     current_x_ << 0, M_PI, 0, 0;
     current_u_ << 0;
@@ -316,10 +317,9 @@ public:
     ofs << "time pos theta vel omega force ref_pos disturbance" << std::endl;
     rclcpp::Rate rate(1.0 / sim_dt);
     bool no_exit = false;
-    pnh_.getParam("no_exit", no_exit);
+    nh_->get_parameter("no_exit", no_exit);
     constexpr double end_t = 10.0; // [sec]
-    rclcpp::Timer mpc_timer = nh_.createTimer(rclcpp::Duration(mpc_dt),
-                                           std::bind(&TestDDPCartPole::mpcTimerCallback, this, std::placeholders::_1));
+    rclcpp::TimerBase::SharedPtr mpc_timer = nh_->create_wall_timer(std::chrono::duration<double>(mpc_dt), std::bind(&TestDDPCartPole::mpcTimerCallback, this));
     while(rclcpp::ok() && (no_exit || current_t_ < end_t))
     {
       // Simulate one step
@@ -340,11 +340,11 @@ public:
           << dist_u_.transpose() << std::endl;
 
       // Publish marker
-      marker_arr_pub_.publish(makeMarkerArr());
-      ros::spinOnce();
+      marker_arr_pub_->publish(makeMarkerArr());
+      rclcpp::spin_some(nh_);
       rate.sleep();
     }
-    mpc_timer.stop();
+    mpc_timer->cancel();
 
     // Check final pos
     double ref_pos = getRefPos(current_t_);
@@ -385,7 +385,7 @@ protected:
     return limits;
   };
 
-  void mpcTimerCallback(const ros::TimerEvent & // event
+  void mpcTimerCallback(
   )
   {
     // Solve
@@ -402,28 +402,32 @@ protected:
     }
   }
 
-  bool distCallback(std_srvs::srv::Empty::Request &, // req
-                    std_srvs::srv::Empty::Response &, // res
+  void distCallback(const std::shared_ptr<std_srvs::srv::Empty::Request> request, // req
+                    std::shared_ptr<std_srvs::srv::Empty::Response> response,
                     double dist_force)
   {
+    (void)request;
+    (void)response;
     dist_u_ << dist_force;
     dist_t_ = current_t_ + 0.5; // [sec]
-    return true;
   }
 
-  bool targetPosCallback(std_srvs::srv::Empty::Request &, // req
-                         std_srvs::srv::Empty::Response &, // res
+  void targetPosCallback(const std::shared_ptr<std_srvs::srv::Empty::Request> request, // req
+                        std::shared_ptr<std_srvs::srv::Empty::Response> response, // res
                          double pos)
   {
+    (void)request;
+    (void)response;
     target_pos_ = pos;
-    return true;
   }
 
   visualization_msgs::msg::MarkerArray makeMarkerArr() const
   {
-    std_msgs::Header header_msg;
+    std_msgs::msg::Header header_msg;
     header_msg.frame_id = "world";
-    header_msg.stamp = rclcpp::Time::now();
+    rclcpp::Clock clock;
+    rclcpp::Time time_now = clock.now();
+    header_msg.stamp = time_now;
 
     // Instantiate marker array
     visualization_msgs::msg::MarkerArray marker_arr_msg;
@@ -584,16 +588,15 @@ protected:
 
   bool first_iter_ = true;
 
-  ros::NodeHandle nh_;
-  ros::NodeHandle pnh_ = ros::NodeHandle("~");
-  ros::Publisher marker_arr_pub_;
-  ros::ServiceServer dist_left_small_srv_;
-  ros::ServiceServer dist_right_small_srv_;
-  ros::ServiceServer dist_left_large_srv_;
-  ros::ServiceServer dist_right_large_srv_;
-  ros::ServiceServer target_pos_m5_srv_;
-  ros::ServiceServer target_pos_0_srv_;
-  ros::ServiceServer target_pos_p5_srv_;
+  std::shared_ptr<rclcpp::Node> nh_ = rclcpp::Node::make_shared("test_ddp_cart_pole");
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_arr_pub_;
+  rclcpp::Service<std_srvs::srv::Empty>::SharedPtr dist_left_small_srv_;
+  rclcpp::Service<std_srvs::srv::Empty>::SharedPtr dist_right_small_srv_;
+  rclcpp::Service<std_srvs::srv::Empty>::SharedPtr dist_left_large_srv_;
+  rclcpp::Service<std_srvs::srv::Empty>::SharedPtr dist_right_large_srv_;
+  rclcpp::Service<std_srvs::srv::Empty>::SharedPtr target_pos_m5_srv_;
+  rclcpp::Service<std_srvs::srv::Empty>::SharedPtr target_pos_0_srv_;
+  rclcpp::Service<std_srvs::srv::Empty>::SharedPtr target_pos_p5_srv_;
 };
 
 TEST(TestDDPCartPole, SolveMpc)
@@ -601,7 +604,7 @@ TEST(TestDDPCartPole, SolveMpc)
   TestDDPCartPole test;
 
   // Sleep to wait for Rviz to launch
-  rclcpp::Duration(1.0).sleep();
+  rclcpp::sleep_for(std::chrono::seconds(1));
 
   test.run();
 }
@@ -650,6 +653,6 @@ TEST(TestDDPCartPole, CheckDerivative)
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
-  ::testing::InitGoogleTest(&argc, argv);
+  testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

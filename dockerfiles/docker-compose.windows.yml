@@ -1,7 +1,7 @@
 version: '3.3'
 
 services:
-  nmpc_collection:
+  nmpc:
     image: nmpc:humble
     user: root
     container_name: nmpc-humble

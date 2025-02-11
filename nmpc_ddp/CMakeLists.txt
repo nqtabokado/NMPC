@@ -17,6 +17,7 @@ project(nmpc_ddp LANGUAGES CXX)
 
 # Options
 option(OPTIMIZE_FOR_NATIVE "Enable -march=native" OFF)
+option(AMENT_CMAKE_UNINSTALL_TARGET "Test" OFF)
 
 find_package(rclcpp REQUIRED)
 find_package(visualization_msgs REQUIRED)
