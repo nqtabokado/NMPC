@@ -71,6 +71,7 @@ endif()
 
 install(TARGETS nmpc_ddp EXPORT "${TARGETS_EXPORT_NAME}")
 install(DIRECTORY include/nmpc_ddp DESTINATION include)
+ament_export_include_directories(include)
 
 if(BUILD_TESTING)
   add_subdirectory(tests)

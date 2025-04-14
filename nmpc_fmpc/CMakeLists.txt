@@ -55,6 +55,7 @@ install(DIRECTORY include/nmpc_fmpc DESTINATION include)
 if(NOT NMPC_STANDALONE)
   ament_target_dependencies(nmpc_fmpc INTERFACE
     rclcpp
+    nmpc_ddp
     std_srvs
     visualization_msgs
   )
