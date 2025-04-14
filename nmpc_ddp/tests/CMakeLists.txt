@@ -3,6 +3,7 @@ if(NOT NMPC_STANDALONE)
 endif()
 
 if(NMPC_STANDALONE)
+  enable_testing()
   find_package(GTest REQUIRED)
   include(GoogleTest)
   function(add_nmpc_ddp_test NAME)
