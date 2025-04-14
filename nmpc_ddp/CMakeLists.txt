@@ -11,6 +11,7 @@ set(PROJECT_USE_CMAKE_EXPORT TRUE)
 set(CXX_DISABLE_WERROR ON)
 option(INSTALL_DOCUMENTATION "Generate and install the documentation" OFF)
 
+include(../cmake/base.cmake)
 project(nmpc_ddp LANGUAGES CXX)
 
 # Options
@@ -75,9 +76,9 @@ if(NOT NMPC_STANDALONE)
   ament_export_include_directories(include)
 endif()
 
-# if(BUILD_TESTING)
-add_subdirectory(tests)
-# endif()
+if(BUILD_TESTING)
+  add_subdirectory(tests)
+endif()
 
 if(INSTALL_DOCUMENTATION)
   add_subdirectory(doc)
