@@ -34,7 +34,7 @@ if(NOT NMPC_STANDALONE)
   ament_package()
 else()
   set(BUILD_TESTING OFF)
-  find_package(nmpc_ddp REQUIRED)
+  # find_package(nmpc_ddp REQUIRED)
 endif()
 
 add_library(nmpc_fmpc INTERFACE)
