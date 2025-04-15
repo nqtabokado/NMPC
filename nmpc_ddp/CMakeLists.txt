@@ -40,7 +40,8 @@ if(NOT NMPC_STANDALONE)
     Eigen3
   )
 else()
-  set(BUILD_TESTING OFF)
+  include(CTest)
+  enable_testing()
 endif()
 
 add_library(nmpc_ddp INTERFACE)
