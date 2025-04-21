@@ -74,3 +74,7 @@ endif()
 if(INSTALL_DOCUMENTATION)
   add_subdirectory(doc)
 endif()
+
+if(NOT NMPC_STANDALONE)
+  ament_package()
+endif()
