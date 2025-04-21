@@ -51,8 +51,12 @@ if(OPTIMIZE_FOR_NATIVE)
   target_compile_options(nmpc_fmpc INTERFACE -march=native)
 endif()
 
-install(TARGETS nmpc_fmpc EXPORT "${TARGETS_EXPORT_NAME}")
+install(TARGETS nmpc_fmpc EXPORT nmpc_fmpcTargets)
 install(DIRECTORY include/nmpc_fmpc DESTINATION include)
+if(NOT NMPC_STANDALONE)
+  ament_export_targets(nmpc_fmpcTargets)
+  ament_export_include_directories(include)
+endif()
 
 if(NOT NMPC_STANDALONE)
   ament_target_dependencies(nmpc_fmpc INTERFACE

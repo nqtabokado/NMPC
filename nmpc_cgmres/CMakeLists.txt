@@ -52,9 +52,12 @@ else()
   target_include_directories(nmpc_cgmres SYSTEM PUBLIC "${EIGEN3_INCLUDE_DIR}")
 endif()
 
-install(TARGETS nmpc_cgmres EXPORT "${TARGETS_EXPORT_NAME}")
+install(TARGETS nmpc_cgmres EXPORT nmpc_cgmresTargets)
 install(DIRECTORY include/nmpc_cgmres DESTINATION include)
-
+if(NOT NMPC_STANDALONE)
+  ament_export_targets(nmpc_cgmresTargets)
+  ament_export_include_directories(include)
+endif()
 
 if(OPTIMIZE_FOR_NATIVE)
   # TODO fix segmentation faults
