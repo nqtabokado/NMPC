@@ -30,8 +30,6 @@ if(NOT NMPC_STANDALONE)
   # Eigen
   find_package(Eigen3 REQUIRED)
   include_directories(${EIGEN3_INCLUDE_DIR})
-
-  ament_package()
 else()
   find_package(Eigen3 REQUIRED)
   include_directories(${EIGEN3_INCLUDE_DIR})
